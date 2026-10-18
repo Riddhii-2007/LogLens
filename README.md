@@ -6,7 +6,7 @@
 [![GUI](https://img.shields.io/badge/GUI-Java%20Swing%20%2F%20AWT-green.svg)]()
 [![Dependencies](https://img.shields.io/badge/Dependencies-Zero%20External%20(Bundled%20JDBC)-brightgreen.svg)]()
 
-> **LogLens** is a lightweight, real-time desktop observability suite and incident management system written in pure Java. It tails production log streams without freezing the user interface, parses and validates log entries, detects high-frequency error bursts using a sliding time-window algorithm, groups repetitive error signatures via regex pattern masking, and tracks incidents through a persistent SQLite database with Role-Based Access Control (RBAC).
+> **LogLens** is a lightweight, real-time log monitoring and incident tracking tool designed for small engineering teams, development squads, and modern service architectures. Built in pure Java, it tails application log files in the background without freezing the interface, validates incoming entries, detects abnormal error bursts through a sliding time-window algorithm, groups repetitive error signatures using pattern masking, and manages incident lifecycles backed by embedded database persistence and Role-Based Access Control (RBAC).
 
 ---
 
@@ -41,8 +41,9 @@
    - [Incident Escalation Rules](#d-incident-escalation-rules)
    - [Multithreading & Concurrency Control](#e-multithreading--concurrency-control)
    - [Role-Based Access Control (RBAC)](#f-role-based-access-control-rbac)
-10. [Academic & Syllabus Alignment](#10-academic--syllabus-alignment)
-11. [Troubleshooting & FAQs](#11-troubleshooting--faqs)
+10. [Concepts Used in the Project](#10-concepts-used-in-the-project)
+11. [Limitations and Future Scope](#11-limitations-and-future-scope)
+12. [Troubleshooting & FAQs](#12-troubleshooting--faqs)
 
 ---
 
@@ -62,10 +63,10 @@ Modern software systems and microservices generate thousands of log events every
 LogLens provides an **all-in-one, zero-infrastructure desktop observability platform** that requires **no external servers, no cloud subscriptions, and no complicated setup**. You simply run it directly on your machine.
 
 LogLens acts as an intelligent sentinel:
-1. It continuously tails an application's live log file in a background daemon thread.
+1. It continuously tails an application's live log file in a background thread.
 2. It parses lines into structured data objects while quarantining corrupt or garbage logs into an audit tab.
 3. It counts errors within a moving time window (e.g., last 10 seconds). If errors spike beyond a threshold, it triggers a visual alert.
-4. It extracts root error signatures using regular expressions, grouping hundreds of duplicate errors into clean templates.
+4. It extracts root error signatures using pattern masking, grouping hundreds of duplicate errors into clean templates.
 5. It automatically opens an incident in an embedded SQLite database, escalates severity (`MEDIUM` &rarr; `HIGH` &rarr; `CRITICAL`) as the blast radius widens, and lets operators acknowledge and resolve incidents.
 
 ### Key Highlights & Capabilities
@@ -78,9 +79,9 @@ LogLens acts as an intelligent sentinel:
 | **Pattern Masking & Grouping** | Replaces dynamic IPv4 addresses with `<IP>` and numbers with `<N>`. Sorts and aggregates recurring error patterns to highlight the top root causes. |
 | **Incident Lifecycle Management** | Backed by an embedded SQLite database (`loglens.db`). Incidents move through states: `OPEN` &rarr; `ACKNOWLEDGED` &rarr; `RESOLVED`. Severity escalates dynamically as error counts rise. |
 | **Role-Based Access Control (RBAC)** | Secure login screen using one-way **SHA-256** password hashing. Distinguishes `ADMIN` operators (full access) from `VIEWER` users (read-only access). |
-| **Dynamic Regex Log Search** | Real-time `TableRowSorter` filtering on live logs by keyword, service name, or error text. |
+| **Log Search** | Real-time case-insensitive text search across all columns (timestamp, level, service, message) via `TableRowSorter`. |
 | **CSV Incident Export** | One-click export utility that writes incident post-mortem reports to timestamped CSV files in `exports/`. |
-| **Persistent User Settings** | Native Java Object Serialization (`ObjectInputStream` / `ObjectOutputStream`) saves sliding-window duration, error threshold, and export directory to `settings.ser`. |
+| **Persistent User Settings** | Native Java Object Serialization (`ObjectInputStream` / `ObjectOutputStream`) saves sliding-window duration, error threshold, and export folder (`exportFolder`) to `settings.ser`. |
 | **Built-in Traffic Simulator** | Five toolbar buttons that inject mock normal traffic, error storms, and corrupted lines so you can test and demo every feature immediately without external microservices. |
 
 ---
@@ -100,10 +101,9 @@ LogLens acts as an intelligent sentinel:
 ### Why is Java 8 the Minimum Required Version?
 
 LogLens was deliberately engineered to be universally backwards-compatible while taking advantage of modern Java standard library capabilities:
-1. **`java.time` Date & Time API:** The project utilizes `java.time.LocalDateTime`, `java.time.format.DateTimeFormatter`, and `java.time.format.DateTimeParseException` for microsecond-accurate timestamp parsing and sliding-window date arithmetic (`minusSeconds()`, `isBefore()`). These classes were introduced in **Java 8** and replaced the legacy, thread-unsafe `java.util.Date` and `SimpleDateFormat`.
-2. **Diamond Operator (`<>`):** Used throughout the collection initializations (introduced in Java 7, standard in Java 8).
-3. **Try-with-Resources:** Automatic resource management on database connections, statements, result sets, and file streams.
-4. **Swing Event Dispatch Architecture:** Fully compatible with Java 8 through Java 21+ without any modularity warnings.
+1. **`java.time` Date & Time API:** The project utilizes `java.time.LocalDateTime`, `java.time.format.DateTimeFormatter`, and `java.time.format.DateTimeParseException` for second-precision timestamp parsing and sliding-window date arithmetic (`minusSeconds()`, `isBefore()`). These classes were introduced in **Java 8** and replaced the legacy, thread-unsafe `java.util.Date` and `SimpleDateFormat`.
+2. **Try-with-Resources:** Automatic resource management on database connections, statements, result sets, and file streams.
+3. **Swing Event Dispatch Architecture:** Fully compatible with Java 8 through Java 21+ without any modularity warnings.
 
 > **Note on Higher Java Versions (Java 11, 17, 21):** LogLens compiles and runs seamlessly on modern Long-Term Support (LTS) releases (Java 11, Java 17, Java 21) without requiring any additional compiler flags or configuration changes.
 
@@ -244,14 +244,14 @@ At the bottom of the main dashboard, you will find five dedicated simulation but
      - The fourth tab dynamically re-labels itself to **`Skipped Lines (3)`**.
      - Switch to the **Skipped Lines** tab to see the audit trail showing timestamp, rejection reason, and raw line content without polluting the clean log view.
 5. **`Settings`**
-   - Opens a dialog to adjust the sliding time-window duration (seconds), error burst threshold, and CSV export folder.
-   - **What to observe:** Changes are serialized to `settings.ser` on disk immediately.
+   - Opens a dialog to adjust the sliding time-window duration (seconds), error burst threshold, and CSV export folder (`exportFolder`).
+   - **What to observe:** Changes are serialized to `settings.ser` on disk and apply the next time the application starts.
 
 ---
 
 ### Step-by-Step Demo Script
 
-For presentations, viva evaluations, or peer reviews, follow this 3-minute walkthrough:
+Follow this 3-minute walkthrough to test and demonstrate each feature:
 
 ```
 [0:00 - 0:30]  LAUNCH & LOGIN
@@ -259,10 +259,10 @@ For presentations, viva evaluations, or peer reviews, follow this 3-minute walkt
                • Log in with "admin" / "admin123".
                • Point out CardLayout transition and user status header.
 
-[0:30 - 1:00]  LIVE LOGS & REGEX SEARCH
+[0:30 - 1:00]  LIVE LOGS & TEXT SEARCH
                • Click "Normal traffic (20 lines)".
                • Show live table scrolling.
-               • Type "payment" into the search box to demonstrate regex filtering.
+               • Type "payment" into the search box to demonstrate text filtering across all columns.
 
 [1:00 - 1:45]  ERROR BURST & DYNAMIC ESCALATION
                • Click "Error burst: payment-service (12)".
@@ -297,18 +297,18 @@ In addition to the interactive Swing dashboard (`AppLauncher`), LogLens includes
 | :--- | :--- | :--- |
 | `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.Main` | `loglens.Main` | **Batch Log Analyzer:** Reads `sample.log`, demonstrates polymorphic parsing (`LogParser`), catches `MalformedLogException`, runs `SpikeDetector`, and prints batch summary metrics. |
 | `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.LiveDemo` | `loglens.LiveDemo` | **Concurrent Producer-Consumer:** Background `LogWatcher` thread tails `live.log` while the main thread generates traffic. Implements `LogListener` callback. |
-| `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.DbDemo` | `loglens.DbDemo` | **SQLite JDBC Operations:** Initializes SQLite schema, inserts sample incidents, tests queries (`findAllOpen()`, `findById()`), updates statuses, and demonstrates SHA-256 user authentication. |
-| `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.IncidentDemo` | `loglens.IncidentDemo` | **Automated Escalation Pipeline:** Simulates error bursts, verifies automated incident creation via `IncidentManager`, and asserts severity escalation (`MEDIUM` &rarr; `CRITICAL`). |
+| `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.DbDemo` | `loglens.DbDemo` | Creates the table, inserts incidents, lists them, acknowledges and resolves one, shows that resolving an unacknowledged incident is refused, filters by status and deletes an incident. |
+| `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar" loglens.IncidentDemo` | `loglens.IncidentDemo` | Runs the full pipeline on generated logs and prints each incident being opened and escalated. |
 | `java -cp "bin;lib/sqlite-jdbc-3.36.0.3.jar;lib/mysql-connector-j-8.0.33.jar" loglens.CallableDemo` | `loglens.CallableDemo` | **MySQL CallableStatement Demo:** Connects to MySQL, defines and executes stored procedures demonstrating `IN`, `OUT`, and `INOUT` parameters as well as `ResultSet` streaming. |
 
 *(Note: Replace `;` with `:` if running on macOS or Linux).*
 
 ### Running the CallableStatement Demo (MySQL Stored Procedures)
 
-While the main LogLens application uses embedded SQLite so it can run out-of-the-box with zero database setup, SQLite does not natively support stored procedures. To demonstrate the `CallableStatement` interface required by enterprise Java syllabi, LogLens includes a dedicated standalone demonstration in `loglens.CallableDemo` utilizing **MySQL**.
+While the main LogLens application uses embedded SQLite so it can run out-of-the-box with zero database setup, SQLite does not natively support stored procedures. To demonstrate stored procedure execution and the `CallableStatement` interface, LogLens includes a dedicated standalone demonstration in `loglens.CallableDemo` utilizing **MySQL**.
 
 #### Why SQLite for the Main App vs. MySQL for CallableStatement?
-The main LogLens application intentionally runs on **SQLite** because it is completely serverless, zero-configuration, and requires no external database server or credentials—making the project 100% portable, reliable to demonstrate, and effortless to submit. However, because embedded SQLite engines lack native support for stored procedures, the `CallableStatement` interface is demonstrated in a separate, isolated module using **MySQL**, allowing full exploration of server-side stored procedures, procedural compilation, parameter binding, and IN/OUT data exchange without introducing complex server dependencies to the core application.
+The main LogLens application intentionally runs on **SQLite** because it is completely serverless, zero-configuration, and requires no external database server or credentials—making the project 100% portable, self-contained, and easy to run without external infrastructure. However, because embedded SQLite engines lack native support for stored procedures, the `CallableStatement` interface is demonstrated in a separate, isolated module using **MySQL**, allowing full exploration of server-side stored procedures, procedural compilation, parameter binding, and IN/OUT data exchange without introducing complex server dependencies to the core application.
 
 #### Steps to Run CallableDemo:
 
@@ -401,9 +401,10 @@ stateDiagram-v2
     OPEN --> ACKNOWLEDGED: Operator sets handled_by and clicks Acknowledge
     ACKNOWLEDGED --> ACKNOWLEDGED: Additional errors arrive (Escalates severity)
     ACKNOWLEDGED --> RESOLVED: Operator clicks Resolve
-    OPEN --> RESOLVED: Operator directly resolves incident
     RESOLVED --> [*]: Incident archived; service unblocked for future incidents
 ```
+
+An incident must be acknowledged before it can be resolved; the SQL in IncidentDAO enforces this.
 
 ---
 
@@ -414,17 +415,18 @@ LogLens/
 ├── .gitignore                      # Git ignore rules (.class, *.db, *.ser, etc.)
 ├── README.md                       # Comprehensive project documentation
 ├── run.bat                         # 1-click Windows compilation & launch script
-├── live.log                        # Live tail target file (auto-created on run)
 ├── sample.log                      # Sample static log file for batch demonstration
-├── loglens.db                      # Embedded SQLite database (tables: incidents, users)
-├── settings.ser                    # Serialized runtime configuration file
 ├── mysql.properties.example        # Template configuration for MySQL CallableStatement demo
-├── sources.txt                     # Discovered list of Java files for compiler
-├── bin/                            # Compiled JVM bytecode (.class files)
-├── docs/                           # Documentation, demo script, and viva guides
-│   └── DEMO_SCRIPT.md              # Minute-by-minute demo script & top 8 viva Q&As
-├── exports/                        # Destination directory for CSV incident exports
-│   └── incidents_*.csv             # Exported incident reports
+├── bin/                            # (generated at run time) Compiled .class files
+├── sources.txt                     # (generated at run time) Discovered compiler source list
+├── live.log                        # (generated at run time) Live tail target log file
+├── loglens.db                      # (generated at run time) Embedded SQLite database
+├── settings.ser                    # (generated at run time) Serialized runtime preferences
+├── exports/                        # (generated at run time) CSV incident export reports
+├── mysql.properties                # (generated at run time) Local MySQL credentials
+├── docs/                           # Documentation and guides
+│   ├── DEMO_SCRIPT.md              # Step-by-step feature demo walkthrough
+│   └── class-diagram.md            # Mermaid UML class and relationship diagrams
 ├── sql/                            # SQL scripts
 │   └── mysql_setup.sql             # MySQL schema & stored procedures for Workbench / CLI
 ├── lib/                            # Bundled libraries
@@ -442,7 +444,7 @@ LogLens/
         │   ├── LogEntry.java       # Immutable parsed log line (timestamp, level, service, message)
         │   ├── Incident.java       # Tracked incident entity with lifecycle status & timestamps
         │   ├── User.java           # User account model with credentials and role (ADMIN / VIEWER)
-        │   └── Settings.java       # Serializable application preferences
+        │   └── Settings.java       # Serializable application preferences (windowSeconds, threshold, exportFolder)
         │
         ├── parser/                 # Log parsing abstractions & implementations
         │   ├── LogParser.java      # Abstract base parser declaring parse() contract & validation
@@ -453,7 +455,7 @@ LogLens/
         │
         ├── engine/                 # Real-time processing & detection engine
         │   ├── LogListener.java    # Observer callback interface (onEntry, onSpike, onMalformed)
-        │   ├── LogWatcher.java     # Background daemon thread tailing live.log via polling
+        │   ├── LogWatcher.java     # Background thread tailing live.log via polling
         │   ├── SpikeDetector.java  # Sliding-window algorithm detecting error bursts
         │   ├── ErrorGrouper.java   # Thread-safe aggregator grouping masked error patterns
         │   └── IncidentManager.java# Pipeline coordinator managing lifecycle & severity escalation
@@ -464,7 +466,7 @@ LogLens/
         │   └── UserDAO.java        # User authentication, password verification, & seeding
         │
         ├── util/                   # Utility helpers
-        │   ├── PatternMasker.java  # Regex utility masking IPs and numbers to <IP> and <N>
+        │   ├── PatternMasker.java  # Pattern masking utility replacing IPs and numbers with <IP> and <N>
         │   ├── PasswordUtil.java   # SHA-256 cryptographic hashing utility
         │   ├── SettingsStore.java  # Java Object Serialization for user settings
         │   ├── IncidentExporter.java # CSV generator for incident post-mortems
@@ -477,8 +479,7 @@ LogLens/
             ├── LiveLogPanel.java   # Live log stream table with search filtering & color cell renderers
             ├── IncidentPanel.java  # Incidents table with Acknowledge/Resolve controls & CSV export
             ├── PatternPanel.java   # Ranked top-error signature breakdown table
-            ├── SkippedPanel.java   # Audit table displaying rejected malformed lines
-            └── SettingsDialog.java # Modal dialog for adjusting thresholds & preferences
+            └── SkippedPanel.java   # Audit table displaying rejected malformed lines
 ```
 
 ---
@@ -486,6 +487,8 @@ LogLens/
 ## 8. Database Schema & Persistence
 
 LogLens uses an embedded SQLite database (`loglens.db`). No database server installation or configuration is needed; the file is created and managed automatically.
+
+Timestamps are stored as text in the format yyyy-MM-dd HH:mm:ss.
 
 ### Table: `incidents`
 
@@ -498,9 +501,9 @@ CREATE TABLE IF NOT EXISTS incidents (
     pattern          TEXT NOT NULL,
     severity         TEXT NOT NULL,        -- 'MEDIUM', 'HIGH', 'CRITICAL'
     status           TEXT NOT NULL,        -- 'OPEN', 'ACKNOWLEDGED', 'RESOLVED'
-    opened_at        TEXT NOT NULL,        -- ISO-8601 formatted timestamp
-    acknowledged_at  TEXT,                 -- Nullable timestamp
-    resolved_at      TEXT,                 -- Nullable timestamp
+    opened_at        TEXT NOT NULL,        -- Stored as text: yyyy-MM-dd HH:mm:ss
+    acknowledged_at  TEXT,                 -- Stored as text: yyyy-MM-dd HH:mm:ss (Nullable)
+    resolved_at      TEXT,                 -- Stored as text: yyyy-MM-dd HH:mm:ss (Nullable)
     handled_by       TEXT                  -- Name of operator handling the incident
 );
 ```
@@ -523,7 +526,9 @@ CREATE TABLE IF NOT EXISTS users (
 Stores user preferences via native Java Object Serialization:
 - `windowSeconds` (Default: `10` seconds)
 - `threshold` (Default: `3` errors)
-- `exportDirectory` (Default: `exports`)
+- `exportFolder` (Default: `exports`)
+
+*Note: Changes made in the GUI Settings dialog are written to `settings.ser` immediately and apply the next time the application starts.*
 
 ---
 
@@ -562,7 +567,7 @@ In `PatternMasker.java`:
 1. **IP Masking First:** Replaces IPv4 strings (`\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b`) with `<IP>`.
 2. **Number Masking Second:** Replaces remaining sequences of digits (`\\d+`) with `<N>`.
 
-*Why order matters:* If numbers were masked first, an IP address like `10.0.0.4` would become `<N>.<N>.<N>.<N>`, destroying its structure and preventing the IP regex from matching!
+*Why order matters:* If numbers were masked first, an IP address like `10.0.0.4` would become `<N>.<N>.<N>.<N>`, destroying its structure and preventing the IP pattern from matching!
 
 ### D. Incident Escalation Rules
 
@@ -590,23 +595,43 @@ Upon login:
 
 ---
 
-## 10. Academic & Syllabus Alignment
+## 10. Concepts Used in the Project
 
-LogLens is structured to demonstrate core Computer Science and Object-Oriented Software Engineering concepts:
+LogLens is designed using core Object-Oriented Software Engineering patterns and practical Java architecture concepts:
 
-| Curriculum Unit | Core Syllabus Topics | Implemented Classes in LogLens | Real-World Application |
+| Concept Area | Core Engineering Principles | Implemented Classes in LogLens | Practical Application in Project |
 | :--- | :--- | :--- | :--- |
-| **Unit I: OOP Fundamentals** | Classes, Objects, Encapsulation, Immutability, Constructors | `LogEntry`, `Incident`, `User`, `Settings` | Strongly typed domain entities with private fields, defensive getters, and custom `toString()` formatting. |
-| **Unit II: Polymorphism & Exceptions** | Abstract Classes, Interfaces, Checked Exceptions, Exception Propagation | `LogParser`, `AppLogParser`, `LogListener`, `MalformedLogException` | Abstract parsing contract, custom checked exception handling with `try-catch-finally`, decoupling ingestion from visualization. |
-| **Unit III: Multithreading & I/O** | `Runnable`, Concurrency, `volatile`, File Streams, Object Serialization | `LogWatcher`, `SettingsStore`, `IncidentExporter` | Non-blocking file tailing on background daemon thread; object persistence via `ObjectOutputStream`; thread visibility with `volatile`. |
-| **Unit IV: Collections & Generics** | Generics, Lists, Queues, HashMaps, Regex, Custom Comparators | `SpikeDetector`, `ErrorGrouper`, `PatternMasker` | Sliding-window time tracking with `LinkedList`, frequency aggregation with `HashMap`, and regex tokenization. |
-| **Unit V: GUI & Database (JDBC)** | Swing/AWT, `CardLayout`, `JTable`, Event Dispatch Thread, JDBC (`Statement`, `PreparedStatement`, `CallableStatement`) | `MainFrame`, `LoginPanel`, `DBConnection`, `IncidentDAO`, `UserDAO`, `CallableDemo` | Desktop dashboard with `CardLayout` card flips; parameterized queries via `PreparedStatement` preventing SQL injection; `CallableStatement` is demonstrated in `CallableDemo` with MySQL stored procedures (IN, OUT, and INOUT parameters). |
+| **OOP Design & Encapsulation** | Classes, Objects, Encapsulation, Immutability, Standard Getters | `LogEntry`, `Incident`, `User`, `Settings` | Strongly typed domain entities with private fields, standard getters, constructors, and custom `toString()` formatting. |
+| **Polymorphism & Exceptions** | Abstract Classes, Interfaces, Checked Exceptions, Propagation | `LogParser`, `AppLogParser`, `LogListener`, `MalformedLogException` | Abstract parsing contract, custom checked exception handling with `try-catch-finally`, decoupling ingestion from visualization. |
+| **Multithreading & Concurrency** | `Runnable`, Thread Safety, `volatile` Memory Visibility, Concurrency Control | `LogWatcher`, `SpikeDetector`, `ErrorGrouper` | Dedicated background thread tailing log file without blocking the UI; `volatile` control flag; thread-safe `synchronized` methods protecting shared queues and maps. |
+| **File I/O & Serialization** | File Streams, Object Serialization, CSV Export | `SettingsStore`, `IncidentExporter` | File reading and writing with `BufferedReader`/`BufferedWriter`; persistent settings via `ObjectOutputStream` and `ObjectInputStream` (`exportFolder`); CSV incident export with `FileWriter`. |
+| **Collections & Queues** | Generics, Lists, Queues, HashMaps, Pattern Matching, Custom Comparators | `SpikeDetector`, `ErrorGrouper`, `PatternMasker` | Sliding-window time tracking with `LinkedList`, frequency aggregation with `HashMap`, and pattern tokenization. |
+| **GUI & Database Persistence** | Swing/AWT, `CardLayout`, `JTable`, Event Dispatch Thread, JDBC (`Statement`, `PreparedStatement`, `CallableStatement`) | `MainFrame`, `LoginPanel`, `LiveLogPanel`, `IncidentPanel`, `PatternPanel`, `SkippedPanel`, `DBConnection`, `IncidentDAO`, `UserDAO`, `CallableDemo` | Desktop dashboard with `CardLayout` card flips; parameterized queries via `PreparedStatement` preventing SQL injection; `CallableStatement` is demonstrated in `CallableDemo` with MySQL stored procedures (IN, OUT, and INOUT parameters). |
 
-> **Note on Database Engines & `CallableStatement`:** The main LogLens desktop application runs on **SQLite** (`Statement`, `PreparedStatement`) because SQLite is serverless, zero-config, and embeddable without requiring any local database service to be running. However, because SQLite lacks native stored procedure support, **CallableStatement** is demonstrated via a dedicated standalone module (`loglens.CallableDemo`) connected to **MySQL**, showcasing stored procedures with `IN`, `OUT`, and `INOUT` parameters as well as `ResultSet` streaming.
+> **Note on Database Engines & `CallableStatement`:** The main LogLens desktop application runs on **SQLite** (using `Statement` and `PreparedStatement`) because SQLite is serverless, zero-config, and embeddable without requiring any external database service. However, because SQLite lacks native stored procedure support, **CallableStatement** is demonstrated via a dedicated standalone module (`loglens.CallableDemo`) connected to **MySQL**, showcasing stored procedures with `IN`, `OUT`, and `INOUT` parameters as well as `ResultSet` streaming.
 
 ---
 
-## 11. Troubleshooting & FAQs
+## 11. Limitations and Future Scope
+
+### Limitations
+- **Unsalted Password Hashing:** User passwords are stored using SHA-256 without salt, which protects against casual inspection but remains vulnerable to rainbow table attacks if the database file is extracted.
+- **Database Engine Split:** The primary application runs exclusively on embedded SQLite, while stored procedures and `CallableStatement` are demonstrated separately on MySQL because SQLite has no native procedural language.
+- **Single Log Target:** The background watcher tails only a single local log file (`live.log`) rather than watching multiple distributed files simultaneously.
+- **Settings Require Application Restart:** While user preferences are written to `settings.ser` immediately upon saving, changes to window duration and alert threshold take effect the next time the application is started.
+- **Fixed Threshold Spike Detection:** Spike detection uses a static numeric threshold within a fixed sliding time window rather than dynamic baseline analysis or machine learning anomaly detection.
+- **Desktop-Only Interface:** LogLens is built with Java Swing for desktop environments and does not provide a browser-based web dashboard or REST API.
+
+### Future Scope
+- **Salted Password Hashing:** Implement cryptographic salting (e.g., bcrypt, PBKDF2, or Argon2) for enterprise-grade credential security.
+- **Alert Integrations:** Support automated outbound webhooks and notifications (email via SMTP, Slack, Discord, or Microsoft Teams) when critical incidents occur.
+- **Multi-File & Remote Ingestion:** Aggregate logs from multiple files, directories, or remote hosts over TCP/UDP sockets and Syslog protocols.
+- **Web Dashboard:** Build a modern web interface or lightweight REST API for browser-based monitoring and remote incident acknowledgement.
+- **Adaptive Anomaly Detection:** Implement moving averages and dynamic baseline anomaly detection algorithms that adapt to fluctuating traffic patterns over time.
+
+---
+
+## 12. Troubleshooting & FAQs
 
 ### Q1: `javac` or `java` is not recognized as an internal or external command
 - **Cause:** Java is either not installed or its `bin` folder is missing from your system `PATH`.
@@ -641,4 +666,4 @@ LogLens is structured to demonstrate core Computer Science and Object-Oriented S
 
 ## License
 
-This project is open-source and intended for educational, academic, and evaluation purposes.
+This project is open-source and intended for development, evaluation, and operational monitoring.
