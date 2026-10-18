@@ -1,0 +1,5 @@
+bin/
+sources.txt
+live.log
+loglens.db
+*.class
