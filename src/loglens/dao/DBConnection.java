@@ -22,7 +22,7 @@ public class DBConnection {
 
     // Initializes database schema if the tables do not already exist
     public static void createTables() {
-        String sql = "CREATE TABLE IF NOT EXISTS incidents ("
+        String sqlIncidents = "CREATE TABLE IF NOT EXISTS incidents ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 + "service TEXT NOT NULL, "
                 + "pattern TEXT NOT NULL, "
@@ -34,9 +34,17 @@ public class DBConnection {
                 + "handled_by TEXT"
                 + ");";
 
+        String sqlUsers = "CREATE TABLE IF NOT EXISTS users ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + "username TEXT UNIQUE NOT NULL, "
+                + "password_hash TEXT NOT NULL, "
+                + "role TEXT NOT NULL"
+                + ");";
+
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            stmt.execute(sqlIncidents);
+            stmt.execute(sqlUsers);
         } catch (SQLException e) {
             System.err.println("Error initializing database schema: " + e.getMessage());
         }

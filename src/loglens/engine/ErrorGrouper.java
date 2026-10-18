@@ -65,8 +65,34 @@ public class ErrorGrouper {
         return entries;
     }
 
+    // Returns the masked pattern with the highest count for the given service (excluding "service: " prefix),
+    // or "Unknown error" if no error pattern exists for that service.
+    public synchronized String getTopPatternForService(String service) {
+        if (service == null) {
+            return "Unknown error";
+        }
+
+        String prefix = service + ": ";
+        String topPattern = null;
+        int maxCount = -1;
+
+        for (Map.Entry<String, Integer> entry : patternCounts.entrySet()) {
+            if (entry.getKey().startsWith(prefix)) {
+                if (entry.getValue() > maxCount) {
+                    maxCount = entry.getValue();
+                    topPattern = entry.getKey().substring(prefix.length());
+                }
+            }
+        }
+
+        return (topPattern != null) ? topPattern : "Unknown error";
+    }
+
     // Returns the total number of distinct error patterns observed so far
     public synchronized int getPatternCount() {
         return patternCounts.size();
     }
 }
+
+
+

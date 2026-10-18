@@ -112,6 +112,24 @@ public class IncidentDAO {
         return null;
     }
 
+    // Checks whether an active incident (OPEN or ACKNOWLEDGED) already exists for a service
+    public boolean hasActiveIncident(String service) throws SQLException {
+        String sql = "SELECT 1 FROM incidents WHERE service = ? AND (status = ? OR status = ?) LIMIT 1";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, service);
+            stmt.setString(2, Incident.STATUS_OPEN);
+            stmt.setString(3, Incident.STATUS_ACKNOWLEDGED);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+
     // Transitions an incident from OPEN to ACKNOWLEDGED.
     //
     // Why check status rules directly in the SQL WHERE clause?
@@ -164,6 +182,21 @@ public class IncidentDAO {
             return stmt.executeUpdate() > 0;
         }
     }
+
+    // Updates the severity level of an incident
+    public boolean updateSeverity(int id, String severity) throws SQLException {
+        String sql = "UPDATE incidents SET severity = ? WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, severity);
+            stmt.setInt(2, id);
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
 
     // Converts a LocalDateTime to a formatted string, or null
     private String formatDateTime(LocalDateTime dateTime) {

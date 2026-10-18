@@ -3,3 +3,6 @@ sources.txt
 live.log
 loglens.db
 *.class
+settings.ser
+exports/
+mysql.properties
