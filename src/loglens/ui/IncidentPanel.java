@@ -52,7 +52,7 @@ public class IncidentPanel extends JPanel {
     private final DefaultTableModel tableModel;
     private final JTable table;
 
-    public IncidentPanel(final IncidentDAO dao, final IncidentManager manager) {
+    public IncidentPanel(IncidentDAO dao, IncidentManager manager) {
         super(new BorderLayout());
         this.dao = dao;
         this.manager = manager;
@@ -212,7 +212,7 @@ public class IncidentPanel extends JPanel {
                 try {
                     boolean success = dao.resolve(incidentId);
                     if (success) {
-                        manager.incidentClosed(service);
+                        IncidentPanel.this.manager.incidentClosed(service);
                         refresh();
                     } else {
                         JOptionPane.showMessageDialog(IncidentPanel.this, 
@@ -326,6 +326,10 @@ public class IncidentPanel extends JPanel {
         ackButton.setEnabled(!readOnly);
         resolveButton.setEnabled(!readOnly);
         handledByField.setEnabled(!readOnly);
+    }
+
+    public IncidentManager getManager() {
+        return manager;
     }
 
     // Custom renderer that highlights the Severity column
